@@ -5,9 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional, Union
 
-# ---------------------------------------------------------------------------
+
 # Expressões: produzem um valor
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -47,11 +46,7 @@ class BinOp:
     dir: Expr
     linha: int = 0
 
-
-# ---------------------------------------------------------------------------
 # Comandos: executam uma ação
-# ---------------------------------------------------------------------------
-
 
 @dataclass
 class Atribuicao:
@@ -119,10 +114,7 @@ class Programa:
     comandos: list[Comando] = field(default_factory=list)
     linha: int = 0
 
-
-# ---------------------------------------------------------------------------
 # Apelidos de tipo (só para documentar o que cada campo aceita)
-# ---------------------------------------------------------------------------
 
 Expr = Union[Numero, Booleano, Variavel, BinOp]
 Comando = Union[Atribuicao, Print, Bloco, If, While, For]
