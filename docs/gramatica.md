@@ -135,7 +135,30 @@ A tabela abaixo define a prioridade de avaliação e o sentido de agrupamento do
 ---
 
 
-## 4. Exemplos Comentados
+## 4. Regras Semânticas
+
+As regras abaixo definem os tipos e os resultados das expressões MiniLang. Uma violação durante a análise ou execução deve produzir um erro semântico, com a linha correspondente quando disponível.
+
+### 4.1 Tipos e operações
+
+- Os únicos tipos de valor são **inteiro** e **booleano**. Literais `NUM` são inteiros; `true` e `false` são booleanos. Uma variável recebe o tipo do valor atribuído a ela.
+- Os operadores aritméticos `+`, `-`, `*` e `/` aceitam somente operandos inteiros e produzem um inteiro. Usá-los com booleanos é erro semântico; por exemplo, `true + 1` é inválido.
+- Os operadores relacionais `<`, `<=`, `>` e `>=` aceitam somente operandos inteiros e produzem um booleano.
+- Os operadores `==` e `!=` aceitam operandos de tipos iguais e produzem um booleano. Comparar inteiro com booleano é erro semântico; por exemplo, `1 == true` é inválido.
+- A condição de `if`, `while` e `for` deve produzir um booleano. Um inteiro usado como condição é erro semântico.
+- `print` aceita expressões inteiras ou booleanas.
+
+### 4.2 Divisão inteira e divisão por zero
+
+- `/` realiza divisão inteira, descartando a parte fracionária em direção a zero: `7 / 2` resulta em `3` e `-7 / 2` resulta em `-3`.
+- Dividir por zero é erro semântico durante a execução.
+
+### 4.3 Variáveis
+
+- Uma variável só pode ser lida depois de receber um valor por atribuição. Ler uma variável ainda não definida é erro semântico.
+- Atribuições podem atualizar o valor de uma variável; o novo valor pode ser inteiro ou booleano.
+
+## 5. Exemplos Comentados
 
 ### Exemplo 1: Programa Válido
 

@@ -53,13 +53,14 @@ Montar a estrutura do repositório, dividir o trabalho, combinar as interfaces e
 | 12/11 | Rafael | pytest adicionado e funcionando | requirements.txt | 9e30085 |
 | 12/11 | Rafael | Tabela de tokens, tabela de transições do AFD, EBNF, tabela de precedência e 5 exemplos comentados; programas de exemplo válido e inválido | docs/gramatica.md, exemplos/*.ml | d3b0ee6 |
 | 12/11 | Wilia | Diário de bordo com template semanal | docs/diario_de_bordo.md | |
+| 12/11 | Rafael | Inclusão das regras semânticas de tipos, condições, `print`, divisão inteira, divisão por zero e variáveis | docs/gramatica.md, docs/diario_de_bordo.md | — |
 
 ### Uso de IA
 | Data | Integrante | Ferramenta / modelo | Para que foi usada | Resultado | O que foi corrigido e por quê |
 | --- | --- | --- | --- | --- | --- |
 | 11/11 | Wilia | Claude Code (Claude Opus 5.5) | Montar o plano de trabalho com divisão entre os três integrantes | Reescrito | Ajustes feitos pelo grupo: datas, formato das tabelas e ordem de dependência entre as fases |
 | 12/11 | Wilia | Claude Code (Claude Opus 5.5) | Conferir as entregas de Rafael e Richard contra o enunciado e o plano | Aceito | Apontou falta das regras de tipo na gramática e nomes de tokens diferentes do combinado |
-| | Rafael | | | | |
+| 12/11 | Rafael | Codex (GPT-6 Luna) | Analisar a lacuna de regras semânticas indicada e ajudar a especificar as regras na gramática | Aceito | A divisão inteira foi definida com truncamento em direção a zero (`-7 / 2` resulta em `-3`); a especificação foi revisada e registrada pelo integrante |
 | | Richard | | | | |
 
 ### Decisões tomadas
