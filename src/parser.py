@@ -2,6 +2,16 @@
 
 Gramática (EBNF, ver docs/gramatica.md):
 
+    Programa      = { Comando } ;
+    Comando       = AtribuicaoCmd | PrintCmd | Bloco | IfCmd | WhileCmd | ForCmd ;
+    Bloco         = "{" { Comando } "}" ;
+    Atribuicao    = ID "=" Expressao ;
+    AtribuicaoCmd = Atribuicao ";" ;
+    PrintCmd      = "print" "(" Expressao ")" ";" ;
+    IfCmd         = "if" "(" Expressao ")" Bloco [ "else" Bloco ] ;
+    WhileCmd      = "while" "(" Expressao ")" Bloco ;
+    ForCmd        = "for" "(" Atribuicao ";" Expressao ";" Atribuicao ")" Bloco ;
+
     Expressao = Soma [ OpRel Soma ] ;
     OpRel     = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
     Soma      = Termo { ( "+" | "-" ) Termo } ;
@@ -15,15 +25,21 @@ não associatividade das comparações vem do `[ ... ]` (no máximo uma).
 
 Interface pública:
 
-    Parser(tokenizar(codigo)).parse_expressao()
+    Parser(tokenizar(codigo)).parse_programa()    # programa completo
+    Parser(tokenizar(codigo)).parse_expressao()   # só uma expressão
 
-`parse_expressao()` lê uma expressão completa e exige `EOF` em seguida.
-Os métodos `expressao`, `soma`, `termo` e `fator` NÃO exigem `EOF`: o futuro
-parser de comandos (atribuição, print, if, while, for) poderá chamá-los
-e continuar de onde a expressão terminou.
+Ambos exigem `EOF` ao final. Os métodos por produção (`expressao`, `soma`,
+`termo`, `fator`, `comando`, `bloco`, `atribuicao`, ...) NÃO exigem `EOF`
+e continuam de onde a produção termina.
 
-Convenção de `linha` nos nós da AST: literais e variáveis recebem a linha
-do seu token; `BinOp` recebe a linha do token do operador.
+Convenção de `linha` nos nós da AST:
+  - literais e variáveis: linha do seu token;
+  - `BinOp`: linha do token do operador;
+  - `Atribuicao`: linha do identificador (primeiro token);
+  - `Print`, `If`, `While`, `For`: linha da palavra reservada;
+  - `Bloco`: linha do `{`;
+  - `Programa`: linha do primeiro token (a do `EOF` se o programa é vazio).
+O `else` não tem nó próprio; `If.senao` é `None` quando ele não existe.
 
 Erros léxicos (`LexerError`) não são capturados aqui: o parser só recebe
 tokens já produzidos.
@@ -31,7 +47,21 @@ tokens já produzidos.
 
 from __future__ import annotations
 
-from src.ast_nodes import BinOp, Booleano, Expr, Numero, Variavel
+from src.ast_nodes import (
+    Atribuicao,
+    BinOp,
+    Bloco,
+    Booleano,
+    Comando,
+    Expr,
+    For,
+    If,
+    Numero,
+    Print,
+    Programa,
+    Variavel,
+    While,
+)
 from src.lexer import Token
 
 
@@ -86,7 +116,23 @@ class Parser:
             token.linha, token.coluna, esperado, encontrado,
         )
 
+    def _esperar(self, tipo: str, descricao: str) -> Token:
+        """Consome um token do tipo dado ou lança ErroSintatico."""
+
+        if self._atual().tipo != tipo:
+            raise self._erro(descricao, self._atual())
+        return self._consumir()
+
     # Interface pública
+
+    def parse_programa(self) -> Programa:
+        """Programa = { Comando } ;  Exige EOF ao final."""
+
+        linha = self._atual().linha
+        comandos: list[Comando] = []
+        while self._atual().tipo != "EOF":
+            comandos.append(self.comando())
+        return Programa(comandos, linha=linha)
 
     def parse_expressao(self) -> Expr:
         """Analisa uma expressão completa; o próximo token deve ser EOF."""
@@ -158,3 +204,102 @@ class Parser:
             self._consumir()
             return interna  # parênteses só agrupam; não geram nó
         raise self._erro("número, 'true', 'false', identificador ou '('", token)
+
+    # Comandos: uma função por produção
+
+    def comando(self) -> Comando:
+        """Comando = AtribuicaoCmd | PrintCmd | Bloco | IfCmd | WhileCmd | ForCmd ;
+
+
+        O primeiro token decide a produção (LL(1))."""
+        tipo = self._atual().tipo
+        if tipo == "ID":
+            return self.atribuicao_cmd()
+        if tipo == "PRINT":
+            return self.print_cmd()
+        if tipo == "LBRACE":
+            return self.bloco()
+        if tipo == "IF":
+            return self.if_cmd()
+        if tipo == "WHILE":
+            return self.while_cmd()
+        if tipo == "FOR":
+            return self.for_cmd()
+        raise self._erro(
+            "comando (identificador, 'print', 'if', 'while', 'for' ou '{')",
+            self._atual(),
+        )
+
+    def bloco(self) -> Bloco:
+        """Bloco = "{" { Comando } "}" ;"""
+
+        abre = self._esperar("LBRACE", "'{'")
+        comandos: list[Comando] = []
+        while self._atual().tipo not in ("RBRACE", "EOF"):
+            comandos.append(self.comando())
+        self._esperar("RBRACE", "'}'")
+        return Bloco(comandos, linha=abre.linha)
+
+    def atribuicao(self) -> Atribuicao:
+        """Atribuicao = ID "=" Expressao ;  (sem ';', usada também no for)"""
+
+        nome = self._esperar("ID", "identificador")
+        self._esperar("ASSIGN", "'='")
+        return Atribuicao(nome.valor, self.expressao(), linha=nome.linha)
+
+    def atribuicao_cmd(self) -> Atribuicao:
+        """AtribuicaoCmd = Atribuicao ";" ;"""
+
+        no = self.atribuicao()
+        self._esperar("SEMICOLON", "';'")
+        return no
+
+    def print_cmd(self) -> Print:
+        """PrintCmd = "print" "(" Expressao ")" ";" ;"""
+
+        palavra = self._esperar("PRINT", "'print'")
+        self._esperar("LPAREN", "'('")
+        expr = self.expressao()
+        self._esperar("RPAREN", "')'")
+        self._esperar("SEMICOLON", "';'")
+        return Print(expr, linha=palavra.linha)
+
+    def if_cmd(self) -> If:
+        """IfCmd = "if" "(" Expressao ")" Bloco [ "else" Bloco ] ;"""
+
+        palavra = self._esperar("IF", "'if'")
+        self._esperar("LPAREN", "'('")
+        condicao = self.expressao()
+        self._esperar("RPAREN", "')'")
+        entao = self.bloco()
+        senao = None
+        if self._atual().tipo == "ELSE":
+            self._consumir()
+            senao = self.bloco()  # 'else if' não existe na gramática
+        return If(condicao, entao, senao, linha=palavra.linha)
+
+    def while_cmd(self) -> While:
+        """WhileCmd = "while" "(" Expressao ")" Bloco ;"""
+
+        palavra = self._esperar("WHILE", "'while'")
+        self._esperar("LPAREN", "'('")
+        condicao = self.expressao()
+        self._esperar("RPAREN", "')'")
+        corpo = self.bloco()
+        return While(condicao, corpo, linha=palavra.linha)
+
+    def for_cmd(self) -> For:
+        """ForCmd = "for" "(" Atribuicao ";" Expressao ";" Atribuicao ")" Bloco ;
+
+        As três cláusulas são obrigatórias."""
+
+        palavra = self._esperar("FOR", "'for'")
+        self._esperar("LPAREN", "'('")
+        inicializacao = self.atribuicao()
+        self._esperar("SEMICOLON", "';'")
+        condicao = self.expressao()
+        self._esperar("SEMICOLON", "';'")
+        atualizacao = self.atribuicao()
+        self._esperar("RPAREN", "')'")
+        corpo = self.bloco()
+        return For(inicializacao, condicao, atualizacao, corpo, linha=palavra.linha)

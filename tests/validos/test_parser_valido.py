@@ -2,7 +2,19 @@
 
 import pytest
 
-from src.ast_nodes import BinOp, Booleano, Numero, Variavel
+from src.ast_nodes import (
+    Atribuicao,
+    BinOp,
+    Bloco,
+    Booleano,
+    For,
+    If,
+    Numero,
+    Print,
+    Programa,
+    Variavel,
+    While,
+)
 from src.lexer import tokenizar
 from src.parser import Parser
 
@@ -156,3 +168,169 @@ def test_funcoes_internas_nao_exigem_eof():
     arvore = parser.expressao()
     assert arvore.op == "+"
     assert parser._atual().tipo == "SEMICOLON"
+
+
+def programa(codigo):
+    return Parser(tokenizar(codigo)).parse_programa()
+
+
+def test_programa_vazio():
+    assert programa("") == Programa([], linha=1)
+
+
+def test_programa_so_com_comentario():
+    # Programa vazio: linha do EOF (o comentário ocupa a linha 1, o EOF fica na 2)
+    assert programa("// nada aqui\n") == Programa([], linha=2)
+
+
+def test_atribuicao_simples():
+    arvore = programa("x = 10;")
+    assert arvore == Programa([Atribuicao("x", Numero(10, linha=1), linha=1)], linha=1)
+
+
+def test_atribuicao_com_expressao():
+    arvore = programa("y = 2 * (x + 5);")
+    cmd = arvore.comandos[0]
+    assert isinstance(cmd, Atribuicao)
+    assert cmd.nome == "y"
+    assert cmd.expr.op == "*"
+    assert cmd.expr.esq == Numero(2, linha=1)
+    assert cmd.expr.dir.op == "+"
+    assert cmd.expr.dir.esq == Variavel("x", linha=1)
+    assert cmd.expr.dir.dir == Numero(5, linha=1)
+
+
+def test_atribuicao_de_booleano():
+    cmd = programa("ok = x < 3;").comandos[0]
+    assert cmd.nome == "ok"
+    assert cmd.expr.op == "<"
+
+
+def test_print():
+    cmd = programa("print(x + 1);").comandos[0]
+    assert isinstance(cmd, Print)
+    assert cmd.expr == BinOp("+", Variavel("x", linha=1), Numero(1, linha=1), linha=1)
+    assert cmd.linha == 1
+
+
+def test_if_sem_else():
+    cmd = programa("if (x > 0) { print(x); }").comandos[0]
+    assert isinstance(cmd, If)
+    assert cmd.condicao.op == ">"
+    assert cmd.entao == Bloco([Print(Variavel("x", linha=1), linha=1)], linha=1)
+    assert cmd.senao is None
+
+
+def test_if_com_else():
+    cmd = programa("if (x > 0) { print(x); } else { print(0); }").comandos[0]
+    assert isinstance(cmd, If)
+    assert cmd.entao.comandos == [Print(Variavel("x", linha=1), linha=1)]
+    assert isinstance(cmd.senao, Bloco)
+    assert cmd.senao.comandos == [Print(Numero(0, linha=1), linha=1)]
+
+
+def test_bloco_com_varios_comandos():
+    arvore = programa("{ a = 1; b = 2; print(a + b); }")
+    bloco = arvore.comandos[0]
+    assert isinstance(bloco, Bloco)
+    assert [type(c) for c in bloco.comandos] == [Atribuicao, Atribuicao, Print]
+    assert bloco.comandos[0].nome == "a"
+    assert bloco.comandos[1].nome == "b"
+    assert bloco.comandos[2].expr.op == "+"
+
+
+def test_bloco_vazio():
+    assert programa("{ }").comandos == [Bloco([], linha=1)]
+
+
+def test_while():
+    cmd = programa("while (x > 0) { x = x - 1; }").comandos[0]
+    assert isinstance(cmd, While)
+    assert cmd.condicao == BinOp(">", Variavel("x", linha=1), Numero(0, linha=1), linha=1)
+    assert isinstance(cmd.corpo, Bloco)
+    assert len(cmd.corpo.comandos) == 1
+    atrib = cmd.corpo.comandos[0]
+    assert atrib.nome == "x"
+    assert atrib.expr.op == "-"
+
+
+def test_for_completo_com_tres_clausulas():
+    cmd = programa("for (i = 0; i < 5; i = i + 1) { soma = soma + i; }").comandos[0]
+    assert isinstance(cmd, For)
+    assert cmd.inicializacao == Atribuicao("i", Numero(0, linha=1), linha=1)
+    assert cmd.condicao == BinOp("<", Variavel("i", linha=1), Numero(5, linha=1), linha=1)
+    assert isinstance(cmd.atualizacao, Atribuicao)
+    assert cmd.atualizacao.nome == "i"
+    assert cmd.atualizacao.expr.op == "+"
+    assert isinstance(cmd.corpo, Bloco)
+    assert cmd.corpo.comandos[0].nome == "soma"
+
+
+def test_comandos_aninhados():
+    codigo = (
+        "while (i < 3) {\n"
+        "  if (i == 1) {\n"
+        "    for (j = 0; j < 2; j = j + 1) { print(j); }\n"
+        "  } else {\n"
+        "    { print(i); }\n"
+        "  }\n"
+        "  i = i + 1;\n"
+        "}"
+    )
+    laco = programa(codigo).comandos[0]
+    assert isinstance(laco, While)
+    assert [type(c) for c in laco.corpo.comandos] == [If, Atribuicao]
+
+    cond = laco.corpo.comandos[0]
+    assert isinstance(cond.entao.comandos[0], For)
+    assert isinstance(cond.entao.comandos[0].corpo.comandos[0], Print)
+    # else contém um bloco aninhado
+    assert isinstance(cond.senao.comandos[0], Bloco)
+    assert isinstance(cond.senao.comandos[0].comandos[0], Print)
+
+
+def test_if_aninhado_sem_else_interno():
+    # o else pertence ao if mais interno possível pela gramática (chaves obrigatórias)
+    cmd = programa("if (a) { if (b) { x = 1; } } else { x = 2; }").comandos[0]
+    assert cmd.senao is not None
+    assert cmd.entao.comandos[0].senao is None
+
+
+def test_programa_com_varios_comandos():
+    codigo = (
+        "x = 10;\n"
+        "while (x > 0) { print(x); x = x - 1; }\n"
+        "soma = 0;\n"
+        "for (i = 0; i < 5; i = i + 1) { soma = soma + i; }\n"
+        "if (soma > 20) { print(soma); } else { print(0); }\n"
+    )
+    arvore = programa(codigo)
+    assert [type(c) for c in arvore.comandos] == [Atribuicao, While, Atribuicao, For, If]
+    assert [c.linha for c in arvore.comandos] == [1, 2, 3, 4, 5]
+
+
+def test_convencao_de_linha_dos_comandos():
+    arvore = programa("// c\n\nx\n=\n1;\nprint(x);\n{\n}\nif (true)\n{ }")
+    assert arvore.linha == 3
+    atrib, imprime, bloco, cond = arvore.comandos
+    assert atrib.linha == 3          # linha do identificador
+    assert atrib.expr.linha == 5     # linha do literal
+    assert imprime.linha == 6
+    assert bloco.linha == 7          # linha do '{'
+    assert cond.linha == 9           # linha do 'if'
+    assert cond.entao.linha == 10
+
+
+def test_exemplo_valido_do_repositorio():
+    with open("exemplos/programa_valido.ml", encoding="utf-8") as f:
+        arvore = programa(f.read())
+    tipos = [type(c) for c in arvore.comandos]
+    assert While in tipos and For in tipos
+    laco_for = next(c for c in arvore.comandos if isinstance(c, For))
+    assert laco_for.inicializacao.nome == "n"
+    assert laco_for.condicao.op == "<="
+    assert laco_for.atualizacao.nome == "n"
+
+
+def test_expressoes_continuam_funcionando_pela_interface_antiga():
+    assert analisar("1 + 2 * 3").op == "+"
