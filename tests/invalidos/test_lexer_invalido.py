@@ -1,6 +1,60 @@
+"""Testes inválidos do lexer.
+
+Demonstração da Fase 4 (executar apenas os três casos):
+    python -m pytest -v tests/invalidos/test_lexer_invalido.py -k demonstracao_erro_lexico
+
+Resultados esperados:
+  1. ``x = 1 @ 2;`` -> Erro léxico (linha 1, coluna 7): símbolo inesperado '@'
+     Correção: ``x = 1 + 2;``
+  2. ``x = 1x;`` -> Erro léxico (linha 1, coluna 5): número mal formado (ex.: '1x')
+     Correção: ``x = 1;``
+  3. ``if (x ! 1) { }`` -> Erro léxico (linha 1, coluna 7): símbolo inesperado '!'
+     Correção: ``if (x != 1) { }``
+"""
+
 import pytest
 
 from src.lexer import LexerError, tokenizar
+
+
+def demonstrar_erro(codigo, mensagem, linha, coluna, corrigido):
+    with pytest.raises(LexerError) as erro:
+        tokenizar(codigo)
+
+    assert erro.value.mensagem == mensagem
+    assert (erro.value.linha, erro.value.coluna) == (linha, coluna)
+    assert str(erro.value) == f"Erro léxico (linha {linha}, coluna {coluna}): {mensagem}"
+    assert tokenizar(corrigido)[-1].tipo == "EOF"
+
+
+def test_demonstracao_erro_lexico_caractere_fora_do_alfabeto():
+    demonstrar_erro(
+        "x = 1 @ 2;",
+        "símbolo inesperado '@'",
+        1,
+        7,
+        "x = 1 + 2;",
+    )
+
+
+def test_demonstracao_erro_lexico_numero_mal_formado():
+    demonstrar_erro(
+        "x = 1x;",
+        "número mal formado (ex.: '1x')",
+        1,
+        5,
+        "x = 1;",
+    )
+
+
+def test_demonstracao_erro_lexico_exclamacao_sem_igual():
+    demonstrar_erro(
+        "if (x ! 1) { }",
+        "símbolo inesperado '!'",
+        1,
+        7,
+        "if (x != 1) { }",
+    )
 
 
 @pytest.mark.parametrize("codigo", ["@", "$", "%", "&"])
