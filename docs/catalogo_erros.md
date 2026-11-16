@@ -67,7 +67,7 @@ Um erro semântico ocorre quando o programa está bem formado pela gramática, m
 
 | Categoria | Arquivo de teste | Comando |
 | --- | --- | --- |
-| Léxicos | tests/invalidos/test_lexer_invalido.py | `python -m pytest tests/invalidos/test_lexer_invalido.py -v` |
+| Léxicos | tests/invalidos/test_lexer_invalido.py | `python -m pytest tests/invalidos/test_lexer_invalido.py -v -k demonstracao_erro_lexico` |
 | Sintáticos | tests/invalidos/test_parser_invalido.py | `python -m pytest tests/invalidos/test_parser_invalido.py -v -k demonstracao_erro` |
 | Semânticos | tests/invalidos/test_interpreter_invalido.py | `python -m pytest tests/invalidos/test_interpreter_invalido.py -v` |
 | Laço infinito | tests/invalidos/test_laco_infinito.py | `python -m pytest tests/invalidos/test_laco_infinito.py -v` |
