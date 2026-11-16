@@ -87,3 +87,20 @@ Montar a estrutura do repositório, dividir o trabalho, combinar as interfaces e
 ### Dificuldades e como foram resolvidas
 - **Nomes de tokens diferentes entre o plano e a gramática** (`NEQ`/`LTE`/`GTE`/`SEMICOLON` em vez de `NE`/`LE`/`GE`/`SEMI`) → o grupo adota os nomes da gramática do Rafael.
 - **Nome da exceção léxica** (`LexerError` na gramática e `ErroLexico` no combinado) → a definir.
+
+---
+
+## Semana 2 — 16/11 a 22/11
+
+### Objetivo da semana
+Fase 4 do plano de trabalho: demonstrar com execução 3 erros por categoria (léxico, sintático e semântico), consolidar o catálogo de erros e fazer a revisão cruzada, para depois fechar o relatório, o vídeo e a entrega.
+
+### Atividades por integrante
+| Data | Integrante | Atividade | Arquivos | Commit |
+| --- | --- | --- | --- | --- |
+| 16/11 | Richard | Fase 4: demonstração executável de 3 erros sintáticos, um deles em laço: atribuição sem `;` (`x = 10`), `print` com `)` não fechado (`print(x;`) e `for` sem a cláusula de atualização (`for (i = 0; i < 10) { ... }`). Cada teste confere `mensagem`, `esperado`, `encontrado`, `linha` e `coluna` e mostra que a versão corrigida da mesma entrada é aceita. O resultado esperado dos três casos ficou documentado no comentário do topo do arquivo | tests/invalidos/test_parser_invalido.py, docs/diario_de_bordo.md | 4de6530 |
+
+### Uso de IA
+| Data | Integrante | Ferramenta / modelo | Para que foi usada | Resultado | O que foi corrigido e por quê |
+| --- | --- | --- | --- | --- | --- |
+| 16/11 | Richard | Claude Sonnet 5.5 | Fase 4: demonstrar 3 erros sintáticos (um em laço) no parser. Arquivos alterados: `tests/invalidos/test_parser_invalido.py` e `docs/diario_de_bordo.md`. | Aceito, revisado por Richard. | Nenhuma correção foi necessária: os 3 testes passaram na primeira execução e `python -m pytest -q` deu 200 testes passando (197 anteriores + 3 novos). Já existiam testes equivalentes aos três casos, mas eles não conferiam `mensagem` nem `str(erro)` e não estavam identificados como a demonstração; por isso foram acrescentados 3 testes novos, sem alterar nem remover os existentes. As colunas esperadas (7, 8 e 19) foram contadas à mão a partir do texto das entradas e depois comparadas com a saída real do parser, e não copiadas dela. Teste de sanidade: 3 defeitos introduzidos de propósito no parser (`for` com atualização opcional, coluna do erro deslocada e `print` sem exigir `)`) foram detectados pelos testes demonstrativos. Conceitos: erro sintático é uma sequência de tokens que não pertence à linguagem gerada pela EBNF, e o erro léxico é de outra fase (o lexer reconhece os tokens e o parser a estrutura; os testes tokenizam fora do `pytest.raises`, então um erro léxico não passaria por sintático); o analisador preditivo com um token de lookahead acusa o erro no primeiro token que não continua nenhuma produção (por isso o `for` incompleto falha no `)`, onde se esperava o 2º `;`); a produção `ForCmd` exige as três cláusulas, sem partes opcionais. |
