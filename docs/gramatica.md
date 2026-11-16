@@ -132,6 +132,8 @@ A tabela abaixo define a prioridade de avaliação e o sentido de agrupamento do
 | **2** | `+`, `-` | Adição e Subtração | **Esquerda** | `a - b - c` $\equiv$ `(a - b) - c` |
 | **1 (Mais baixa)** | `==`, `!=`, `<`, `<=`, `>`, `>=` | Comparações relacionais | Não associativo | `a + 1 < b * 2` |
 
+**Sem operador unário.** O `-` só existe como operador binário (produção `Soma`), e `NUM` reconhece apenas `[0-9]+`. Por isso `x = -5;` é um erro sintático: `Fator` não pode começar com `-`. Para obter um valor negativo, escreve-se uma subtração, como `x = 0 - 5;`. A linguagem também não tem `!` para negar booleanos: `!` só aparece dentro de `!=`.
+
 ---
 
 
