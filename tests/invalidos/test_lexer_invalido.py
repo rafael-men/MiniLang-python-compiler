@@ -3,7 +3,7 @@
 Demonstração da Fase 4 (executar apenas os três casos):
     python -m pytest -v tests/invalidos/test_lexer_invalido.py -k demonstracao_erro_lexico
 
-Resultados esperados:
+Esperado:
   1. ``x = 1 @ 2;`` -> Erro léxico (linha 1, coluna 7): símbolo inesperado '@'
      Correção: ``x = 1 + 2;``
   2. ``x = 1x;`` -> Erro léxico (linha 1, coluna 5): número mal formado (ex.: '1x')
