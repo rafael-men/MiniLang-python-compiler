@@ -2,6 +2,18 @@
 
 Resultado esperado: todas as entradas abaixo lançam ErroSintatico, com o
 token encontrado e a posição (linha, coluna) indicados nos asserts.
+
+Demonstração da Fase 4: 3 erros sintáticos (1 deles em laço), no fim do
+arquivo (para rodar só eles: python -m pytest -v -k demonstracao_erro).
+Todos passam pelo lexer sem erro léxico; quem falha é o parser, em ErroSintatico.
+
+  1. "x = 10"  (atribuição sem ';')
+     esperado ';', encontrado fim da entrada, linha 1, coluna 7
+  2. "print(x;"  (print com parêntese não fechado)
+     esperado ')', encontrado ';', linha 1, coluna 8
+  3. for (i = 0; i < 10) { ... }  (laço for sem a cláusula de atualização)
+     esperado ';', encontrado ')', linha 2, coluna 19
+     Viola ForCmd = "for" "(" Atribuicao ";" Expressao ";" Atribuicao ")" Bloco
 """
 
 import pytest
@@ -380,3 +392,82 @@ def test_exemplo_invalido_do_repositorio():
     assert erro.esperado == "';'"
     assert erro.encontrado == "')'"
     assert erro.linha == 10
+
+
+def demonstrar_erro_sintatico(codigo):
+    """Tokeniza e analisa `codigo`, e devolve o ErroSintatico lançado.
+
+    A tokenização fica fora do pytest.raises: se a entrada tivesse erro léxico,
+    o teste falharia com LexerError e não contaria como erro sintático.
+    """
+
+    tokens = tokenizar(codigo)
+    with pytest.raises(ErroSintatico) as erro:
+        Parser(tokens).parse_programa()
+    return erro.value
+
+
+def test_demonstracao_erro_1_atribuicao_sem_ponto_e_virgula():
+    """AtribuicaoCmd = Atribuicao ";" : falta o ';' e a entrada acaba."""
+
+    erro = demonstrar_erro_sintatico("x = 10")
+
+    assert erro.mensagem == "esperado ';', encontrado fim da entrada"
+    assert erro.esperado == "';'"
+    assert erro.encontrado == "fim da entrada"
+    # "x = 10" tem 6 caracteres, então o fim da entrada está na coluna 7
+    assert (erro.linha, erro.coluna) == (1, 7)
+    assert str(erro) == (
+        "Erro sintático (linha 1, coluna 7): esperado ';', encontrado fim da entrada"
+    )
+
+    # Corrigido (com o ';'), o programa é aceito
+    assert len(Parser(tokenizar("x = 10;")).parse_programa().comandos) == 1
+
+
+def test_demonstracao_erro_2_print_com_parentese_nao_fechado():
+    """PrintCmd = "print" "(" Expressao ")" ";" : o ')' foi trocado por ';'."""
+
+    erro = demonstrar_erro_sintatico("print(x;")
+
+    assert erro.mensagem == "esperado ')', encontrado ';'"
+    assert erro.esperado == "')'"
+    assert erro.encontrado == "';'"
+    # print(x;  ->  ';' é o 8º caractere
+    assert (erro.linha, erro.coluna) == (1, 8)
+    assert str(erro) == (
+        "Erro sintático (linha 1, coluna 8): esperado ')', encontrado ';'"
+    )
+
+    # Corrigido (com o ')'), o programa é aceito
+    assert len(Parser(tokenizar("print(x);")).parse_programa().comandos) == 1
+
+
+def test_demonstracao_erro_3_for_sem_clausula_de_atualizacao():
+    """
+    ForCmd = "for" "(" Atribuicao ";" Expressao ";" Atribuicao ")" Bloco
+    As três cláusulas são obrigatórias. Aqui faltam o 2º ';' e a atualização:
+    depois da condição `i < 10` o parser pede ';' e encontra ')'.
+    """
+
+    codigo = (
+        "soma = 0;\n"
+        "for (i = 0; i < 10) {\n"
+        "    soma = soma + i;\n"
+        "}"
+    )
+    erro = demonstrar_erro_sintatico(codigo)
+
+    assert erro.mensagem == "esperado ';', encontrado ')'"
+    assert erro.esperado == "';'"
+    assert erro.encontrado == "')'"
+    # O erro está na linha do `for` (2), não na da atribuição anterior (1).
+    # for (i = 0; i < 10) ->  ')' é o 19º caractere
+    assert (erro.linha, erro.coluna) == (2, 19)
+    assert str(erro) == (
+        "Erro sintático (linha 2, coluna 19): esperado ';', encontrado ')'"
+    )
+
+    # Com as três cláusulas, o mesmo laço é aceito
+    corrigido = codigo.replace("i < 10)", "i < 10; i = i + 1)")
+    assert len(Parser(tokenizar(corrigido)).parse_programa().comandos) == 2
