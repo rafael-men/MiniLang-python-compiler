@@ -218,7 +218,7 @@ def main(argv: list[str]) -> int:
         print("uso: python -m src.interpreter arquivo.ml", file=sys.stderr)
         return 2
     try:
-        with open(argv[0], encoding="utf-8") as arquivo:
+        with open(argv[0], encoding="utf-8-sig") as arquivo:
             codigo = arquivo.read()
     except OSError as erro:
         print(f"não foi possível abrir '{argv[0]}': {erro.strerror}", file=sys.stderr)

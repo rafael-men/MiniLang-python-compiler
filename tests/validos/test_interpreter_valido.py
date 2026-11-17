@@ -186,3 +186,10 @@ def test_exemplo_do_enunciado():
 def test_linha_de_comando_com_programa_valido(capsys):
     assert main([str(EXEMPLOS / "programa_valido.ml")]) == 0
     assert capsys.readouterr().out.split() == ["15", "21", "24"]
+
+
+def test_linha_de_comando_aceita_arquivo_com_bom(tmp_path, capsys):
+    arquivo = tmp_path / "bom.ml"
+    arquivo.write_text("x = 2;\nprint(x * 3);", encoding="utf-8-sig")
+    assert main([str(arquivo)]) == 0
+    assert capsys.readouterr().out.split() == ["6"]
