@@ -104,6 +104,7 @@ Fase 4 do plano de trabalho: demonstrar com execução 3 erros por categoria (l�
 | 16/11 | Wilia | Fase 4: catálogo de erros consolidado (4 léxicos, 9 sintáticos, 10 semânticos e 1 de execução, com mensagem, causa, exemplo e regra violada; erros em laço marcados), comandos para demonstrar cada categoria, justificativa da estratégia de diagnóstico (parar no primeiro erro) e limitação conhecida (verificação semântica dinâmica não detecta erro em ramo não executado) | docs/catalogo_erros.md | 27e0bed |
 | 16/11 | Rafael | Fase 4: demonstração executável de 3 erros léxicos (`@`, `1x` e `!` sem `=`), conferindo mensagem completa e posição e validando a entrada corrigida | tests/invalidos/test_lexer_invalido.py, docs/diario_de_bordo.md | 9251664 |
 | 16/11 | Rafael | Revisão cruzada do parser de Richard, com apoio do Codex: conferência estática das produções e testes em relação à EBNF; não encontrei divergências evidentes | src/parser.py, tests/validos/test_parser_valido.py, tests/invalidos/test_parser_invalido.py | — |
+| 17/11 | Richard | Revisão cruzada do interpreter e da suíte de testes implementados por Wilia. | src/interpreter.py tests/validos/test_interpreter_valido.py tests/validos/test_lacos.py tests/invalidos/test_laco_infinito.py | — |
 
 ### Uso de IA
 | Data | Integrante | Ferramenta / modelo | Para que foi usada | Resultado | O que foi corrigido e por quê |
